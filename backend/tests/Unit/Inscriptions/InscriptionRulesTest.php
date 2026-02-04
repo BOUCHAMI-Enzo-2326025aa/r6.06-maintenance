@@ -225,4 +225,85 @@ final class InscriptionRulesTest extends TestCase
 
         $rules->assertRelayAllowed($competition, $event, $members);
     }
+
+    #[Test]
+    public function individuel_refus_si_epreuve_est_relais(): void
+    {
+
+        $this->expectException(\App\Domain\Inscriptions\DomainException::class);
+        $this->expectExceptionMessage("n'est pas une épreuve individuelle");
+
+        $rules = new InscriptionRules();
+        $competition = new Competition(id: 1, status: CompetitionStatus::Open, maxEventsPerAthlete: 2);
+        $licence = new Licence(number: 123, validated: true, category: 'M');
+        // Tentative d'inscription individuelle sur une épreuve typée Relais
+        $event = new Event(id: 99, compatibleCategory: 'M', type: InscriptionType::Relais);
+
+        $rules->assertIndividualAllowed($competition, $licence, $event, alreadyRegisteredEventsCount: 0);
+    }
+
+    #[Test]
+    public function refus_si_licence_hors_categorie(): void
+    {
+
+        $this->expectException(InscriptionDenied::class);
+        $this->expectExceptionMessage('licencié hors catégorie');
+
+        $rules = new InscriptionRules();
+        $competition = new Competition(id: 1, status: CompetitionStatus::Open, maxEventsPerAthlete: 2);
+        // Simulation d'une licence sans catégorie (ou catégorie vide)
+        $licence = new Licence(number: 123, validated: true, category: '');
+        $event = new Event(id: 10, compatibleCategory: 'M', type: InscriptionType::Individuel);
+
+        $rules->assertIndividualAllowed($competition, $licence, $event, alreadyRegisteredEventsCount: 0);
+    }
+
+    #[Test]
+    public function relais_accepte_taille_equipe_sur_les_bornes_min_et_max(): void
+    {
+
+        $rules = new InscriptionRules();
+        $competition = new Competition(id: 1, status: CompetitionStatus::Open, maxEventsPerAthlete: 2);
+        // Évènement acceptant entre 2 et 4 relayeurs
+        $event = new Event(id: 99, compatibleCategory: 'M', type: InscriptionType::Relais, minTeamSize: 2, maxTeamSize: 4);
+
+        // Cas borne Min (2 membres)
+        $membersMin = [
+            new Licence(number: 1, validated: true, category: 'M'),
+            new Licence(number: 2, validated: true, category: 'M'),
+        ];
+
+        // Cas borne Max (4 membres)
+        $membersMax = [
+            new Licence(number: 1, validated: true, category: 'M'),
+            new Licence(number: 2, validated: true, category: 'M'),
+            new Licence(number: 3, validated: true, category: 'M'),
+            new Licence(number: 4, validated: true, category: 'M'),
+        ];
+
+        $rules->assertRelayAllowed($competition, $event, $membersMin);
+        $rules->assertRelayAllowed($competition, $event, $membersMax);
+
+        $this->assertTrue(true);
+    }
+
+    #[Test]
+    public function relais_refus_si_taille_equipe_trop_grande(): void
+    {
+
+        $this->expectException(InscriptionDenied::class);
+        $this->expectExceptionMessage('nombre de membres invalide');
+
+        $rules = new InscriptionRules();
+        $competition = new Competition(id: 1, status: CompetitionStatus::Open, maxEventsPerAthlete: 2);
+        $event = new Event(id: 99, compatibleCategory: 'M', type: InscriptionType::Relais, minTeamSize: 2, maxTeamSize: 2);
+        $members =
+            [
+                new Licence(number: 1, validated: true, category: 'M'),
+                new Licence(number: 2, validated: true, category: 'M'),
+                new Licence(number: 3, validated: true, category: 'M'), // Un membre de trop
+            ];
+
+        $rules->assertRelayAllowed($competition, $event, $members);
+    }
 }
