@@ -1,0 +1,13 @@
+default:
+  extensions:
+    Behat\MinkExtension:
+      base_url: http://127.0.0.1:8000
+      default_session: ma_session
+      sessions:
+        ma_session:
+          browserkit_http: ~
+  suites:
+    default:
+      contexts:
+        - FeatureContext
+        - Behat\MinkExtension\Context\MinkContext
