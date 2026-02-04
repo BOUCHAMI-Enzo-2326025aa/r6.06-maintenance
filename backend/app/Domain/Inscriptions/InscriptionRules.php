@@ -15,16 +15,25 @@ final class InscriptionRules
      */
     public function assertIndividualAllowed(
         Competition $competition,
-        Licence $licence,
-        Event $event,
-        int $alreadyRegisteredEventsCount,
-    ): void {
-        if (! $competition->isOpen()) {
+        Licence     $licence,
+        Event       $event,
+        int         $alreadyRegisteredEventsCount,
+    ): void
+    {
+        if (!$competition->isOpen()) {
             throw InscriptionDenied::competitionClosed();
         }
 
-        if (! $licence->validated) {
+        if ($event->isTeam()) {
+            throw new DomainException("Cette épreuve n'est pas une épreuve individuelle.");
+        }
+
+        if (!$licence->validated) {
             throw InscriptionDenied::licenceNotValidated();
+        }
+
+        if (trim($licence->category) === '') {
+            throw InscriptionDenied::licenceCategoryMissing();
         }
 
         if ($alreadyRegisteredEventsCount >= $competition->maxEventsPerAthlete) {
@@ -41,14 +50,15 @@ final class InscriptionRules
      */
     public function assertRelayAllowed(
         Competition $competition,
-        Event $event,
-        array $members,
-    ): void {
-        if (! $competition->isOpen()) {
+        Event       $event,
+        array       $members,
+    ): void
+    {
+        if (!$competition->isOpen()) {
             throw InscriptionDenied::competitionClosed();
         }
 
-        if (! $event->isTeam()) {
+        if (!$event->isTeam()) {
             throw new DomainException("Cette épreuve n'est pas un relais/équipe.");
         }
 
@@ -59,7 +69,7 @@ final class InscriptionRules
 
         $seen = [];
         foreach ($members as $member) {
-            if (! $member->validated) {
+            if (!$member->validated) {
                 throw InscriptionDenied::licenceNotValidated();
             }
 

@@ -35,4 +35,9 @@ final class InscriptionDenied extends DomainException
     {
         return new self('Inscription refusée : doublon dans les membres.');
     }
+
+    public static function licenceCategoryMissing(): self
+    {
+        return new self('Inscription refusée : licencié hors catégorie.');
+    }
 }
