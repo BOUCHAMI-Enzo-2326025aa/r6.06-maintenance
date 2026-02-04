@@ -175,4 +175,54 @@ final class InscriptionRulesTest extends TestCase
 
         $rules->assertRelayAllowed($competition, $event, $members);
     }
+
+    #[Test]
+    public function individuel_autorise_si_deja_inscrit_a_max_moins_un(): void
+    {
+        $rules = new InscriptionRules();
+        $competition = new Competition(id: 1, status: CompetitionStatus::Open, maxEventsPerAthlete: 2);
+        $licence = new Licence(number: 123, validated: true, category: 'M');
+        $event = new Event(id: 10, compatibleCategory: 'M', type: InscriptionType::Individuel);
+
+        // frontière : max-1 => autorisé
+        $rules->assertIndividualAllowed($competition, $licence, $event, alreadyRegisteredEventsCount: 1);
+
+        $this->assertTrue(true);
+    }
+
+    #[Test]
+    public function relais_refus_si_un_membre_n_est_pas_valide(): void
+    {
+        $this->expectException(InscriptionDenied::class);
+        $this->expectExceptionMessage('licencié non validé');
+
+        $rules = new InscriptionRules();
+        $competition = new Competition(id: 1, status: CompetitionStatus::Open, maxEventsPerAthlete: 2);
+        $event = new Event(id: 99, compatibleCategory: 'M', type: InscriptionType::Relais, minTeamSize: 2, maxTeamSize: 4);
+
+        $members = [
+            new Licence(number: 1, validated: true, category: 'M'),
+            new Licence(number: 2, validated: false, category: 'M'),
+        ];
+
+        $rules->assertRelayAllowed($competition, $event, $members);
+    }
+
+    #[Test]
+    public function relais_refus_si_epreuve_pas_de_type_relais(): void
+    {
+        $this->expectException(\App\Domain\Inscriptions\DomainException::class);
+        $this->expectExceptionMessage("n'est pas un relais/équipe");
+
+        $rules = new InscriptionRules();
+        $competition = new Competition(id: 1, status: CompetitionStatus::Open, maxEventsPerAthlete: 2);
+        $event = new Event(id: 10, compatibleCategory: 'M', type: InscriptionType::Individuel);
+
+        $members = [
+            new Licence(number: 1, validated: true, category: 'M'),
+            new Licence(number: 2, validated: true, category: 'M'),
+        ];
+
+        $rules->assertRelayAllowed($competition, $event, $members);
+    }
 }
