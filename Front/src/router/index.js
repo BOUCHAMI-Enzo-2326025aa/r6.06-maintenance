@@ -1,15 +1,13 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import SportsView from '../views/SportsView.vue'
-import EpreuvesView from '../views/EpreuvesView.vue'
-import TournoisView from '../views/TournoisView.vue'
+import ChampionnatsView from '../views/ChampionnatsView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: '/', redirect: '/sports' },
+    { path: '/', redirect: '/championnats' },
     { path: '/sports', component: SportsView },
-    { path: '/epreuves', component: EpreuvesView },
-    { path: '/tournois', component: TournoisView }
+    { path: '/championnats', component: ChampionnatsView }
   ]
 })
 
