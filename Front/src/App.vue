@@ -1,36 +1,33 @@
 <template>
-  <div
-    class="min-h-screen bg-blue-900 flex flex-col items-center justify-center p-6 font-sans"
-  >
-    <div
-      class="bg-white p-10 rounded-3xl shadow-2xl text-center max-w-lg border-t-8 border-yellow-400"
-    >
-      <h1 class="text-4xl font-extrabold text-blue-900 mb-2">UGSEL WEB</h1>
-      <p class="text-gray-500 font-medium mb-8">
-        Refactoring Vue.js + Tailwind
-      </p>
-
-      <div class="space-y-4">
-        <div
-          class="p-4 bg-green-100 text-green-700 rounded-lg font-bold border border-green-200"
+  <div class="min-h-screen bg-slate-50 font-sans text-slate-900">
+    <nav class="bg-blue-900 text-white shadow-lg p-4">
+      <div class="max-w-7xl mx-auto flex gap-8 items-center">
+        <h1
+          class="text-xl font-bold border-r pr-6 border-white/20 tracking-tight"
         >
-          ✅ Si ce bandeau est vert, Tailwind fonctionne !
+          UGSEL <span class="text-yellow-400">CHAMPIONNATS</span>
+        </h1>
+        <div class="flex gap-6">
+          <RouterLink to="/championnats" class="nav-item"
+            >Championnats</RouterLink
+          >
+          <RouterLink to="/sports" class="nav-item">Sports</RouterLink>
         </div>
-
-        <button
-          class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl transition duration-300 transform hover:scale-105 shadow-md"
-        >
-          Bouton stylé
-        </button>
       </div>
-    </div>
+    </nav>
 
-    <p class="mt-6 text-blue-300 text-sm italic animate-pulse">
-      Vite tourne parfaitement.
-    </p>
+    <main class="max-w-7xl mx-auto p-6">
+      <RouterView />
+    </main>
   </div>
 </template>
 
-<script setup>
-// Rien ici pour le moment, on teste juste le visuel
-</script>
+<style scoped>
+/*
+.nav-item {
+  @apply hover:text-yellow-400 font-medium transition-all py-2 border-b-2 border-transparent;
+}
+.router-link-active {
+  @apply text-yellow-400 border-yellow-400;
+}*/
+</style>

@@ -15,6 +15,7 @@ final class Championnat extends Model
     protected $fillable = [
         'sport_id',
         'name',
+        'lieu',
     ];
 
     public function sport(): BelongsTo

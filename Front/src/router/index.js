@@ -1,37 +1,14 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import LoginView from '../views/LoginView.vue'
-import DashboardView from '../views/DashboardView.vue'
-// On importera les autres vues au fur et à mesure
+import SportsView from '../views/SportsView.vue'
+import ChampionnatsView from '../views/ChampionnatsView.vue'
 
 const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
+  history: createWebHistory(),
   routes: [
-    {
-      path: '/login',
-      name: 'login',
-      component: LoginView
-    },
-    {
-      path: '/',
-      name: 'home',
-      component: DashboardView
-    },
-    {
-      path: '/competitions',
-      name: 'competitions',
-      component: () => import('../views/CompetitionsView.vue') // Lazy loading
-    }
-    // Ajouter les autres routes ici
+    { path: '/', redirect: '/championnats' },
+    { path: '/sports', component: SportsView },
+    { path: '/championnats', component: ChampionnatsView }
   ]
-})
-
-// Gardien de navigation (Vérifie si on est connecté)
-router.beforeEach((to, from, next) => {
-  // Note: Il faudra importer le store ici pour vérifier l'auth réelle
-  const publicPages = ['/login']
-  const authRequired = !publicPages.includes(to.path)
-  // Logique simplifiée pour l'instant
-  next()
 })
 
 export default router
