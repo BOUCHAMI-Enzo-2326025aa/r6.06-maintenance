@@ -2,25 +2,26 @@
 import {onMounted, ref} from 'vue'
 import BaseTable from '../components/ui/BaseTable.vue'
 import BaseModal from '../components/ui/BaseModal.vue'
-import {createChampionnat, getOptionsSportsChampionnats} from '../services/championnatsApi'
+import {
+  createChampionnatFull,
+  getOptionsSportsChampionnats,
+  listChampionnats
+} from '../services/championnatsApi'
 
 const showModal = ref(false)
-const headers = ['Championnat', 'Lieu', 'Nb Compétitions', 'Actions']
+const headers = ['Nom', 'Sport', 'Lieu', 'Nb compétitions', 'Actions']
 const championnats = ref([])
 
 const error = ref(null)
 const loading = ref(false)
 
-// --- LA STRUCTURE DE DONNÉES IMBRIQUÉE ---
 const form = ref({
   nom: '',
   lieu: '',
   sportId: null,
-  // Niveau 2 : Liste des Compétitions
   competitions: [
     {
       nom: '',
-      // Niveau 3 : Liste des Épreuves par compétition
       epreuves: [{nom: '', sports: []}]
     }
   ]
@@ -58,7 +59,6 @@ const removeSportFromEpreuve = (cIdx, eIdx, sIdx) => {
 }
 
 const listeSports = ref([])
-const listeCompetitionsExistantes = ref(['Inter-Régional', 'Départemental'])
 
 function resetForm() {
   form.value = {
@@ -69,6 +69,19 @@ function resetForm() {
   }
 }
 
+async function refreshList() {
+  const rows = await listChampionnats()
+
+  championnats.value = (rows || []).map((c) => ({
+    id: c.id,
+    // BaseTable attend col correspondantes aux headers, on fournit des champs déjà “display-friendly”
+    nom: c.name,
+    sport: c.sport?.name ?? '',
+    lieu: c.lieu ?? '',
+    nbCompetitions: c.competitions_count ?? 0
+  }))
+}
+
 async function openCreate() {
   error.value = null
   resetForm()
@@ -77,22 +90,51 @@ async function openCreate() {
 
 async function loadOptions() {
   const options = await getOptionsSportsChampionnats()
-  // Le front attend {id, nom}. Le back renvoie {id, name}.
-  // On normalise ici, sans changer le back.
   listeSports.value = (options.sports || []).map((s) => ({id: s.id, nom: s.name}))
 }
 
 async function submitChampionnat() {
   error.value = null
   loading.value = true
+
   try {
     if (!form.value.sportId) throw new Error('Choisis un sport')
     if (!form.value.nom?.trim()) throw new Error('Nom du championnat obligatoire')
 
-    // V1: crée seulement le championnat (les compétitions/épreuves seront branchées ensuite)
-    await createChampionnat({sportId: form.value.sportId, name: form.value.nom})
+    // Validations front minimales (le back valide aussi)
+    if (!Array.isArray(form.value.competitions) || form.value.competitions.length < 1) {
+      throw new Error('Ajoute au moins une compétition')
+    }
+
+    form.value.competitions.forEach((c, idx) => {
+      if (!c.nom?.trim()) throw new Error(`Nom de compétition obligatoire (ligne ${idx + 1})`)
+      if (!Array.isArray(c.epreuves) || c.epreuves.length < 1) {
+        throw new Error(`Ajoute au moins une épreuve dans la compétition ${idx + 1}`)
+      }
+      c.epreuves.forEach((e, eIdx) => {
+        if (!e.nom?.trim()) throw new Error(`Nom d'épreuve obligatoire (comp ${idx + 1}, épreuve ${eIdx + 1})`)
+      })
+    })
+
+    // Mapping vers payload backend
+    const payload = {
+      sport_id: form.value.sportId,
+      name: form.value.nom,
+      lieu: form.value.lieu,
+      competitions: form.value.competitions.map((c) => ({
+        name: c.nom,
+        epreuves: c.epreuves.map((e) => ({
+          name: e.nom,
+          // V1: toutes individuelles (à étendre quand tu ajoutes team/relay sur le form)
+          modes: ['individual']
+        }))
+      }))
+    }
+
+    await createChampionnatFull(payload)
 
     showModal.value = false
+    await refreshList()
   } catch (e) {
     error.value = e?.message || 'Erreur lors de la création du championnat'
   } finally {
@@ -102,6 +144,7 @@ async function submitChampionnat() {
 
 onMounted(async () => {
   await loadOptions()
+  await refreshList()
 })
 </script>
 
@@ -129,9 +172,7 @@ onMounted(async () => {
       </div>
 
       <section class="p-4 bg-slate-50 rounded-xl border-2 border-slate-200">
-        <h4 class="text-xs font-black uppercase text-slate-400 mb-3 tracking-widest">
-          Global
-        </h4>
+        <h4 class="text-xs font-black uppercase text-slate-400 mb-3 tracking-widest">Global</h4>
         <div class="space-y-3">
           <select v-model="form.sportId" class="w-full border p-2 rounded-lg">
             <option :value="null">Sélectionner un sport...</option>
@@ -154,6 +195,97 @@ onMounted(async () => {
           />
         </div>
       </section>
+
+      <div
+          v-for="(comp, cIdx) in form.competitions"
+          :key="cIdx"
+          class="p-5 border-2 border-blue-100 rounded-2xl bg-white shadow-sm space-y-4 relative"
+      >
+        <button
+            v-if="form.competitions.length > 1"
+            @click="removeCompetition(cIdx)"
+            class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs shadow-md"
+        >
+          ✕
+        </button>
+
+        <div class="flex justify-between items-end border-b pb-2">
+          <div class="flex-1">
+            <label class="block text-[10px] font-bold text-blue-900 uppercase italic">Compétition #{{
+                cIdx + 1
+              }}</label>
+            <input
+                v-model="comp.nom"
+                type="text"
+                placeholder="Nom de la compétition (ex: District)"
+                class="w-full text-lg font-bold outline-none text-blue-900"
+            />
+          </div>
+          <button
+              @click="addEpreuve(cIdx)"
+              class="text-[10px] bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition"
+          >
+            + ÉPREUVE
+          </button>
+        </div>
+
+        <div
+            v-for="(epreuve, eIdx) in comp.epreuves"
+            :key="eIdx"
+            class="ml-4 p-4 bg-blue-50/30 rounded-xl border border-blue-100 space-y-3"
+        >
+          <div class="flex justify-between items-center">
+            <input
+                v-model="epreuve.nom"
+                type="text"
+                placeholder="Nom de l'épreuve (ex: Nage)"
+                class="bg-transparent border-b border-blue-200 focus:border-blue-500 outline-none flex-1 text-sm font-semibold"
+            />
+            <button
+                v-if="comp.epreuves.length > 1"
+                @click="removeEpreuve(cIdx, eIdx)"
+                class="text-red-400 ml-2"
+            >
+              ✕
+            </button>
+          </div>
+
+          <div class="space-y-2">
+            <div class="flex flex-wrap gap-2">
+              <span
+                  v-for="(s, sIdx) in epreuve.sports"
+                  :key="sIdx"
+                  class="bg-blue-900 text-white text-[10px] px-2 py-1 rounded-full flex items-center gap-2 font-bold uppercase"
+              >
+                {{ s.nom }}
+                <button
+                    @click="removeSportFromEpreuve(cIdx, eIdx, sIdx)"
+                    class="hover:text-yellow-400"
+                >
+                  ✕
+                </button>
+              </span>
+            </div>
+
+            <select
+                @change="(e) => addSportToEpreuve(cIdx, eIdx, e.target.value)"
+                class="w-full text-xs border rounded p-1.5 bg-white"
+            >
+              <option value="">+ Ajouter un sport à cette épreuve...</option>
+              <option v-for="s in listeSports" :key="s.id" :value="s.id">
+                {{ s.nom }}
+              </option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <button
+          @click="addCompetition"
+          class="w-full border-2 border-dashed border-slate-300 py-3 rounded-xl text-slate-400 font-bold hover:bg-white hover:border-blue-300 hover:text-blue-500 transition"
+      >
+        + AJOUTER UNE COMPÉTITION
+      </button>
 
       <button
           @click="submitChampionnat"
