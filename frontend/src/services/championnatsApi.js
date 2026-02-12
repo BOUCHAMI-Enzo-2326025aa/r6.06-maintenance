@@ -5,6 +5,10 @@ export async function listChampionnats({sportId} = {}) {
     return apiClient.get(`/api/v1/championnats${qs}`)
 }
 
+export async function getChampionnat(id) {
+    return apiClient.get(`/api/v1/championnats/${encodeURIComponent(id)}`)
+}
+
 export async function createChampionnat({sportId, name, lieu = null}) {
     return apiClient.post('/api/v1/championnats', {
         sport_id: sportId,

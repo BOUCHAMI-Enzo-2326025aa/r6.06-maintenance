@@ -1,6 +1,6 @@
 <script setup>
 import {onMounted, ref} from 'vue'
-import BaseTable from '../components/ui/BaseTable.vue'
+import {useRouter} from 'vue-router'
 import BaseModal from '../components/ui/BaseModal.vue'
 import {
   createChampionnatFull,
@@ -8,8 +8,10 @@ import {
   listChampionnats
 } from '../services/championnatsApi'
 
+const router = useRouter()
+
 const showModal = ref(false)
-const headers = ['Nom', 'Sport', 'Lieu', 'Nb compétitions', 'Actions']
+const headers = ['Nom', 'Sport', 'Lieu', 'Nb compétitions', '']
 const championnats = ref([])
 
 const error = ref(null)
@@ -73,12 +75,11 @@ async function refreshList() {
   const rows = await listChampionnats()
 
   championnats.value = (rows || []).map((c) => ({
-    id: c.id,
-    // BaseTable attend col correspondantes aux headers, on fournit des champs déjà “display-friendly”
     nom: c.name,
     sport: c.sport?.name ?? '',
     lieu: c.lieu ?? '',
-    nbCompetitions: c.competitions_count ?? 0
+    nbCompetitions: c.competitions_count ?? 0,
+    voirPlusId: c.id
   }))
 }
 
@@ -142,6 +143,10 @@ async function submitChampionnat() {
   }
 }
 
+function goToDetails(id) {
+  router.push(`/championnats/${id}`)
+}
+
 onMounted(async () => {
   await loadOptions()
   await refreshList()
@@ -154,17 +159,57 @@ onMounted(async () => {
       Championnats
     </h2>
     <button
-      class="bg-blue-800 text-white px-4 py-2 rounded-lg shadow-lg hover:bg-blue-700 font-bold transition"
-      @click="showModal = true"
+        class="bg-blue-800 text-white px-4 py-2 rounded-lg shadow-lg hover:bg-blue-700 font-bold transition"
+        @click="showModal = true"
     >
       + Créer un Championnat
     </button>
   </div>
 
-  <BaseTable 
-    :headers="headers" 
-    :rows="championnats" 
-  />
+  <div class="w-full overflow-hidden rounded-xl border border-slate-200 shadow-sm bg-white">
+    <table class="w-full border-collapse text-left text-sm">
+      <thead class="bg-slate-50 border-b border-slate-200">
+      <tr>
+        <th
+            v-for="h in headers"
+            :key="h"
+            class="px-6 py-4 font-bold text-slate-700 uppercase tracking-wider text-xs"
+        >
+          {{ h }}
+        </th>
+      </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+      <tr
+          v-for="(row, i) in championnats"
+          :key="i"
+          class="hover:bg-blue-50/50 transition-colors"
+      >
+        <td class="px-6 py-4 text-slate-600">{{ row.nom }}</td>
+        <td class="px-6 py-4 text-slate-600">{{ row.sport }}</td>
+        <td class="px-6 py-4 text-slate-600">{{ row.lieu }}</td>
+        <td class="px-6 py-4 text-slate-600">{{ row.nbCompetitions }}</td>
+        <td class="px-6 py-4 text-right">
+          <button
+              class="text-xs font-bold text-blue-900 border border-blue-200 px-3 py-2 rounded-lg hover:bg-blue-50"
+              @click="goToDetails(row.voirPlusId)"
+          >
+            Voir plus
+          </button>
+        </td>
+      </tr>
+
+      <tr v-if="championnats.length === 0">
+        <td
+            :colspan="headers.length"
+            class="px-6 py-12 text-center text-slate-400 italic"
+        >
+          Aucune donnée enregistrée pour le moment.
+        </td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
 
   <BaseModal
       :show="showModal"
@@ -187,16 +232,16 @@ onMounted(async () => {
           </select>
 
           <input
-            v-model="form.nom"
-            type="text"
-            placeholder="Nom du Championnat"
-            class="w-full border p-2 rounded-lg font-bold"
+              v-model="form.nom"
+              type="text"
+              placeholder="Nom du Championnat"
+              class="w-full border p-2 rounded-lg font-bold"
           >
           <input
-            v-model="form.lieu"
-            type="text"
-            placeholder="Lieu/Ville"
-            class="w-full border p-2 rounded-lg"
+              v-model="form.lieu"
+              type="text"
+              placeholder="Lieu/Ville"
+              class="w-full border p-2 rounded-lg"
           >
         </div>
       </section>
@@ -207,8 +252,8 @@ onMounted(async () => {
           class="p-5 border-2 border-blue-100 rounded-2xl bg-white shadow-sm space-y-4 relative"
       >
         <button
-          class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs shadow-md"
-          @click="removeCompetition(cIdx)"
+            class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs shadow-md"
+            @click="removeCompetition(cIdx)"
         >
           ✕
         </button>
@@ -216,29 +261,29 @@ onMounted(async () => {
         <div class="flex justify-between items-end border-b pb-2">
           <div class="flex-1">
             <label
-              class="block text-[10px] font-bold text-blue-900 uppercase italic"
+                class="block text-[10px] font-bold text-blue-900 uppercase italic"
             >
               Compétition #{{ cIdx + 1 }}
             </label>
             <input
-              v-model="comp.nom"
-              type="text"
-              placeholder="Nom de la compétition (ex: Elite)"
-              class="w-full text-lg font-bold outline-none text-blue-900"
+                v-model="comp.nom"
+                type="text"
+                placeholder="Nom de la compétition (ex: Elite)"
+                class="w-full text-lg font-bold outline-none text-blue-900"
             >
             <select class="text-xs border rounded p-1 bg-slate-50">
               <option>Sélectionner existante...</option>
-              <option 
-                v-for="c in listeCompetitionsExistantes" 
-                :key="c"
+              <option
+                  v-for="c in listeCompetitionsExistantes"
+                  :key="c"
               >
                 {{ c }}
               </option>
             </select>
           </div>
           <button
-            class="text-[10px] bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition"
-            @click="addEpreuve(cIdx)"  
+              class="text-[10px] bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition"
+              @click="addEpreuve(cIdx)"
           >
             + ÉPREUVE
           </button>
@@ -251,14 +296,14 @@ onMounted(async () => {
         >
           <div class="flex justify-between items-center">
             <input
-              v-model="epreuve.nom"
-              type="text"
-              placeholder="Nom de l'épreuve (ex: Finale)"
-              class="bg-transparent border-b border-blue-200 focus:border-blue-500 outline-none flex-1 text-sm font-semibold"
+                v-model="epreuve.nom"
+                type="text"
+                placeholder="Nom de l'épreuve (ex: Finale)"
+                class="bg-transparent border-b border-blue-200 focus:border-blue-500 outline-none flex-1 text-sm font-semibold"
             >
             <button
-              class="text-red-400 ml-2"
-              @click="removeEpreuve(cIdx, eIdx)"
+                class="text-red-400 ml-2"
+                @click="removeEpreuve(cIdx, eIdx)"
             >
               ✕
             </button>
@@ -273,8 +318,8 @@ onMounted(async () => {
               >
                 {{ s.nom }}
                 <button
-                  class="hover:text-yellow-400"
-                  @click="removeSportFromEpreuve(cIdx, eIdx, sIdx)"
+                    class="hover:text-yellow-400"
+                    @click="removeSportFromEpreuve(cIdx, eIdx, sIdx)"
                 >
                   ✕
                 </button>
@@ -282,16 +327,16 @@ onMounted(async () => {
             </div>
 
             <select
-              class="w-full text-xs border rounded p-1.5 bg-white"
-              @change="(e) => addSportToEpreuve(cIdx, eIdx, e.target.value)"
+                class="w-full text-xs border rounded p-1.5 bg-white"
+                @change="(e) => addSportToEpreuve(cIdx, eIdx, e.target.value)"
             >
               <option value="">
                 + Ajouter un sport à cette épreuve...
               </option>
-              <option 
-                v-for="s in listeSports" 
-                :key="s.id" 
-                :value="s.id"
+              <option
+                  v-for="s in listeSports"
+                  :key="s.id"
+                  :value="s.id"
               >
                 {{ s.nom }}
               </option>
@@ -301,8 +346,8 @@ onMounted(async () => {
       </div>
 
       <button
-        class="w-full border-2 border-dashed border-slate-300 py-3 rounded-xl text-slate-400 font-bold hover:bg-white hover:border-blue-300 hover:text-blue-500 transition"
-        @click="addCompetition"
+          class="w-full border-2 border-dashed border-slate-300 py-3 rounded-xl text-slate-400 font-bold hover:bg-white hover:border-blue-300 hover:text-blue-500 transition"
+          @click="addCompetition"
       >
         + AJOUTER UNE COMPÉTITION
       </button>
