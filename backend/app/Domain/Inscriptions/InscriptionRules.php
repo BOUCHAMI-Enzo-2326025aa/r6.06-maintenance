@@ -4,14 +4,21 @@ declare(strict_types=1);
 
 namespace App\Domain\Inscriptions;
 
-// Ajout d'imports explicites pour les exceptions du domaine.
-use App\Domain\Inscriptions\DomainException;
-use App\Domain\Inscriptions\InscriptionDenied;
-
+/**
+ * Règles d'inscription (domaine).
+ *
+ * Ce service ne persiste rien et ne fait pas d'I/O.
+ * Il valide uniquement si une inscription est autorisée, sinon lève une exception métier.
+ */
 final class InscriptionRules
 {
     /**
+     * Valide une inscription individuelle.
+     *
      * @param int $alreadyRegisteredEventsCount Nombre d'épreuves déjà enregistrées pour ce licencié dans cette compétition.
+     *
+     * @throws InscriptionDenied Si une règle métier bloque l'inscription.
+     * @throws DomainException   Si incohérence d'usage (ex: tenter une inscription individuelle sur une épreuve relais/équipe).
      */
     public function assertIndividualAllowed(
         Competition $competition,
@@ -46,7 +53,12 @@ final class InscriptionRules
     }
 
     /**
-     * @param list<Licence> $members
+     * Valide une inscription relais/équipe.
+     *
+     * @param list<Licence> $members Membres de l'équipe (licences), sans doublon, validés et compatibles avec la catégorie de l'épreuve.
+     *
+     * @throws InscriptionDenied Si une règle métier bloque l'inscription.
+     * @throws DomainException   Si incohérence d'usage (ex: appeler relais sur une épreuve individuelle).
      */
     public function assertRelayAllowed(
         Competition $competition,
