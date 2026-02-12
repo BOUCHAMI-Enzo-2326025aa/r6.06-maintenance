@@ -9,8 +9,19 @@ use App\Models\Championnat;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
+/**
+ * Endpoints API (v1) pour les championnats.
+ */
 final class ChampionnatController extends Controller
 {
+    /**
+     * Liste les championnats.
+     *
+     * Query params disponibles :
+     * - sport_id: int (filtrer par sport)
+     *
+     * @return JsonResponse Liste des championnats avec `sport` et `competitions_count`.
+     */
     public function index(Request $request): JsonResponse
     {
         $query = Championnat::query()->with('sport')->withCount('competitions');
@@ -22,6 +33,11 @@ final class ChampionnatController extends Controller
         return response()->json($query->orderBy('name')->get());
     }
 
+    /**
+     * Crée un championnat.
+     *
+     * @return JsonResponse 201 + championnat créé, avec relation `sport` chargée.
+     */
     public function store(StoreChampionnatRequest $request): JsonResponse
     {
         $championnat = Championnat::query()->create($request->validated());
@@ -29,11 +45,21 @@ final class ChampionnatController extends Controller
         return response()->json($championnat->load('sport'), 201);
     }
 
+    /**
+     * Détail d'un championnat.
+     *
+     * Relations chargées :
+     * - sport
+     * - competitions.epreuves.registrationModes
+     */
     public function show(Championnat $championnat): JsonResponse
     {
         return response()->json($championnat->load(['sport', 'competitions.epreuves.registrationModes']));
     }
 
+    /**
+     * Met à jour un championnat.
+     */
     public function update(UpdateChampionnatRequest $request, Championnat $championnat): JsonResponse
     {
         $championnat->fill($request->validated());
@@ -42,6 +68,11 @@ final class ChampionnatController extends Controller
         return response()->json($championnat->load('sport'));
     }
 
+    /**
+     * Supprime un championnat.
+     *
+     * @return JsonResponse 204 si suppression OK.
+     */
     public function destroy(Championnat $championnat): JsonResponse
     {
         $championnat->delete();
