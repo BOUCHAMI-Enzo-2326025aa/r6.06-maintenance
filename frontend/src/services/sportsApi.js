@@ -4,6 +4,6 @@ export async function listSports() {
     return apiClient.get('/api/v1/sports')
 }
 
-export async function createSport({name}) {
-    return apiClient.post('/api/v1/sports', {name})
+export async function createSport({name, type}) {
+    return apiClient.post('/api/v1/sports', {name, type})
 }
