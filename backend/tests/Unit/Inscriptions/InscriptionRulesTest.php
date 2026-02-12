@@ -24,9 +24,9 @@ final class InscriptionRulesTest extends TestCase
         $licence = new Licence(number: 123, validated: true, category: 'M');
         $event = new Event(id: 10, compatibleCategory: 'M', type: InscriptionType::Individuel);
 
+        // Act + Assert (pas d'exception)
         $rules->assertIndividualAllowed($competition, $licence, $event, alreadyRegisteredEventsCount: 0);
-
-        $this->assertTrue(true);
+        $this->addToAssertionCount(1);
     }
 
     #[Test]
@@ -100,7 +100,7 @@ final class InscriptionRulesTest extends TestCase
         ];
 
         $rules->assertRelayAllowed($competition, $event, $members);
-        $this->assertTrue(true);
+        $this->addToAssertionCount(1);
     }
 
     #[Test]
@@ -184,10 +184,9 @@ final class InscriptionRulesTest extends TestCase
         $licence = new Licence(number: 123, validated: true, category: 'M');
         $event = new Event(id: 10, compatibleCategory: 'M', type: InscriptionType::Individuel);
 
-        // frontière : max-1 => autorisé
+        // frontire : max-1 => autoris
         $rules->assertIndividualAllowed($competition, $licence, $event, alreadyRegisteredEventsCount: 1);
-
-        $this->assertTrue(true);
+        $this->addToAssertionCount(1);
     }
 
     #[Test]
@@ -261,7 +260,6 @@ final class InscriptionRulesTest extends TestCase
     #[Test]
     public function relais_accepte_taille_equipe_sur_les_bornes_min_et_max(): void
     {
-
         $rules = new InscriptionRules();
         $competition = new Competition(id: 1, status: CompetitionStatus::Open, maxEventsPerAthlete: 2);
         // Évènement acceptant entre 2 et 4 relayeurs
@@ -283,8 +281,7 @@ final class InscriptionRulesTest extends TestCase
 
         $rules->assertRelayAllowed($competition, $event, $membersMin);
         $rules->assertRelayAllowed($competition, $event, $membersMax);
-
-        $this->assertTrue(true);
+        $this->addToAssertionCount(2);
     }
 
     #[Test]
