@@ -1,15 +1,44 @@
 <script setup>
-import { ref } from 'vue'
+import {onMounted, ref} from 'vue'
 import BaseTable from '../components/ui/BaseTable.vue'
 import BaseModal from '../components/ui/BaseModal.vue'
+import {createSport, listSports} from '../services/sportsApi'
 
 const showModal = ref(false)
-const headers = ['Code', 'Libellé', 'Actions']
-const sports = ref([]) // Tes données viendront ici
+const headers = ['Nom', 'Actions']
+const sports = ref([])
+
+const form = ref({name: ''})
+const error = ref(null)
+const loading = ref(false)
+
+async function refresh() {
+  sports.value = await listSports()
+}
 
 const openAdd = () => {
+  error.value = null
+  form.value = {name: ''}
   showModal.value = true
 }
+
+async function submit() {
+  error.value = null
+  loading.value = true
+  try {
+    await createSport({name: form.value.name})
+    showModal.value = false
+    await refresh()
+  } catch (e) {
+    error.value = e?.message || 'Erreur lors de la création du sport'
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(async () => {
+  await refresh()
+})
 </script>
 
 <template>
@@ -30,11 +59,15 @@ const openAdd = () => {
   />
 
   <BaseModal
-    :show="showModal"
-    title="Ajouter un Sport"
-    @close="showModal = false"
+      :show="showModal"
+      title="Ajouter un Sport"
+      @close="showModal = false"
   >
     <div class="space-y-4">
+      <div v-if="error" class="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-sm">
+        {{ error }}
+      </div>
+
       <input
         type="text"
         placeholder="Code (ex: ATHLE)"
@@ -46,7 +79,9 @@ const openAdd = () => {
         class="w-full border p-3 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
       >
       <button
-        class="w-full bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700 transition"
+          :disabled="loading"
+          @click="submit"
+          class="w-full bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700 transition disabled:opacity-50"
       >
         Enregistrer le sport
       </button>

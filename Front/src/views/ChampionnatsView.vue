@@ -1,31 +1,35 @@
 <script setup>
-import { ref } from 'vue'
+import {onMounted, ref} from 'vue'
 import BaseTable from '../components/ui/BaseTable.vue'
 import BaseModal from '../components/ui/BaseModal.vue'
+import {
+  createChampionnatFull,
+  getOptionsSportsChampionnats,
+  listChampionnats
+} from '../services/championnatsApi'
 
 const showModal = ref(false)
-const headers = ['Championnat', 'Lieu', 'Nb Compétitions', 'Actions']
+const headers = ['Nom', 'Sport', 'Lieu', 'Nb compétitions', 'Actions']
 const championnats = ref([])
 
-// --- LA STRUCTURE DE DONNÉES IMBRIQUÉE ---
+const error = ref(null)
+const loading = ref(false)
+
 const form = ref({
   nom: '',
   lieu: '',
-  // Niveau 2 : Liste des Compétitions
+  sportId: null,
   competitions: [
     {
       nom: '',
-      // Niveau 3 : Liste des Épreuves par compétition
-      epreuves: [
-        { nom: '', sports: [] } // Niveau 4 : Liste des Sports par épreuve
-      ]
+      epreuves: [{nom: '', sports: []}]
     }
   ]
 })
 
 // --- LOGIQUE POUR LES COMPÉTITIONS ---
 const addCompetition = () => {
-  form.value.competitions.push({ nom: '', epreuves: [{ nom: '', sports: [] }] })
+  form.value.competitions.push({nom: '', epreuves: [{nom: '', sports: []}]})
 }
 const removeCompetition = (cIdx) => {
   form.value.competitions.splice(cIdx, 1)
@@ -33,7 +37,7 @@ const removeCompetition = (cIdx) => {
 
 // --- LOGIQUE POUR LES ÉPREUVES ---
 const addEpreuve = (cIdx) => {
-  form.value.competitions[cIdx].epreuves.push({ nom: '', sports: [] })
+  form.value.competitions[cIdx].epreuves.push({nom: '', sports: []})
 }
 const removeEpreuve = (cIdx, eIdx) => {
   form.value.competitions[cIdx].epreuves.splice(eIdx, 1)
@@ -54,14 +58,94 @@ const removeSportFromEpreuve = (cIdx, eIdx, sIdx) => {
   form.value.competitions[cIdx].epreuves[eIdx].sports.splice(sIdx, 1)
 }
 
-// Simulation pour les menus déroulants
-const listeSports = ref([
-  { id: 1, nom: 'Natation' },
-  { id: 2, nom: 'Judo' },
-  { id: 3, nom: 'Cyclisme' },
-  { id: 4, nom: 'Cross' }
-])
-const listeCompetitionsExistantes = ref(['Inter-Régional', 'Départemental'])
+const listeSports = ref([])
+
+function resetForm() {
+  form.value = {
+    nom: '',
+    lieu: '',
+    sportId: null,
+    competitions: [{nom: '', epreuves: [{nom: '', sports: []}]}]
+  }
+}
+
+async function refreshList() {
+  const rows = await listChampionnats()
+
+  championnats.value = (rows || []).map((c) => ({
+    id: c.id,
+    // BaseTable attend col correspondantes aux headers, on fournit des champs déjà “display-friendly”
+    nom: c.name,
+    sport: c.sport?.name ?? '',
+    lieu: c.lieu ?? '',
+    nbCompetitions: c.competitions_count ?? 0
+  }))
+}
+
+async function openCreate() {
+  error.value = null
+  resetForm()
+  showModal.value = true
+}
+
+async function loadOptions() {
+  const options = await getOptionsSportsChampionnats()
+  listeSports.value = (options.sports || []).map((s) => ({id: s.id, nom: s.name}))
+}
+
+async function submitChampionnat() {
+  error.value = null
+  loading.value = true
+
+  try {
+    if (!form.value.sportId) throw new Error('Choisis un sport')
+    if (!form.value.nom?.trim()) throw new Error('Nom du championnat obligatoire')
+
+    // Validations front minimales (le back valide aussi)
+    if (!Array.isArray(form.value.competitions) || form.value.competitions.length < 1) {
+      throw new Error('Ajoute au moins une compétition')
+    }
+
+    form.value.competitions.forEach((c, idx) => {
+      if (!c.nom?.trim()) throw new Error(`Nom de compétition obligatoire (ligne ${idx + 1})`)
+      if (!Array.isArray(c.epreuves) || c.epreuves.length < 1) {
+        throw new Error(`Ajoute au moins une épreuve dans la compétition ${idx + 1}`)
+      }
+      c.epreuves.forEach((e, eIdx) => {
+        if (!e.nom?.trim()) throw new Error(`Nom d'épreuve obligatoire (comp ${idx + 1}, épreuve ${eIdx + 1})`)
+      })
+    })
+
+    // Mapping vers payload backend
+    const payload = {
+      sport_id: form.value.sportId,
+      name: form.value.nom,
+      lieu: form.value.lieu,
+      competitions: form.value.competitions.map((c) => ({
+        name: c.nom,
+        epreuves: c.epreuves.map((e) => ({
+          name: e.nom,
+          // V1: toutes individuelles (à étendre quand tu ajoutes team/relay sur le form)
+          modes: ['individual']
+        }))
+      }))
+    }
+
+    await createChampionnatFull(payload)
+
+    showModal.value = false
+    await refreshList()
+  } catch (e) {
+    error.value = e?.message || 'Erreur lors de la création du championnat'
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(async () => {
+  await loadOptions()
+  await refreshList()
+})
 </script>
 
 <template>
@@ -83,18 +167,25 @@ const listeCompetitionsExistantes = ref(['Inter-Régional', 'Départemental'])
   />
 
   <BaseModal
-    :show="showModal"
-    title="Configuration Championnat"
-    @close="showModal = false"
+      :show="showModal"
+      title="Configuration Championnat"
+      @close="showModal = false"
   >
     <div class="space-y-6 max-h-[75vh] overflow-y-auto pr-2 custom-scrollbar">
+      <div v-if="error" class="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-sm">
+        {{ error }}
+      </div>
+
       <section class="p-4 bg-slate-50 rounded-xl border-2 border-slate-200">
-        <h4
-          class="text-xs font-black uppercase text-slate-400 mb-3 tracking-widest"
-        >
-          Global
-        </h4>
+        <h4 class="text-xs font-black uppercase text-slate-400 mb-3 tracking-widest">Global</h4>
         <div class="space-y-3">
+          <select v-model="form.sportId" class="w-full border p-2 rounded-lg">
+            <option :value="null">Sélectionner un sport...</option>
+            <option v-for="s in listeSports" :key="s.id" :value="s.id">
+              {{ s.nom }}
+            </option>
+          </select>
+
           <input
             v-model="form.nom"
             type="text"
@@ -111,9 +202,9 @@ const listeCompetitionsExistantes = ref(['Inter-Régional', 'Départemental'])
       </section>
 
       <div
-        v-for="(comp, cIdx) in form.competitions"
-        :key="cIdx"
-        class="p-5 border-2 border-blue-100 rounded-2xl bg-white shadow-sm space-y-4 relative"
+          v-for="(comp, cIdx) in form.competitions"
+          :key="cIdx"
+          class="p-5 border-2 border-blue-100 rounded-2xl bg-white shadow-sm space-y-4 relative"
       >
         <button
           class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs shadow-md"
@@ -154,9 +245,9 @@ const listeCompetitionsExistantes = ref(['Inter-Régional', 'Départemental'])
         </div>
 
         <div
-          v-for="(epreuve, eIdx) in comp.epreuves"
-          :key="eIdx"
-          class="ml-4 p-4 bg-blue-50/30 rounded-xl border border-blue-100 space-y-3"
+            v-for="(epreuve, eIdx) in comp.epreuves"
+            :key="eIdx"
+            class="ml-4 p-4 bg-blue-50/30 rounded-xl border border-blue-100 space-y-3"
         >
           <div class="flex justify-between items-center">
             <input
@@ -176,9 +267,9 @@ const listeCompetitionsExistantes = ref(['Inter-Régional', 'Départemental'])
           <div class="space-y-2">
             <div class="flex flex-wrap gap-2">
               <span
-                v-for="(s, sIdx) in epreuve.sports"
-                :key="sIdx"
-                class="bg-blue-900 text-white text-[10px] px-2 py-1 rounded-full flex items-center gap-2 font-bold uppercase"
+                  v-for="(s, sIdx) in epreuve.sports"
+                  :key="sIdx"
+                  class="bg-blue-900 text-white text-[10px] px-2 py-1 rounded-full flex items-center gap-2 font-bold uppercase"
               >
                 {{ s.nom }}
                 <button
@@ -217,7 +308,9 @@ const listeCompetitionsExistantes = ref(['Inter-Régional', 'Départemental'])
       </button>
 
       <button
-        class="w-full bg-blue-900 text-white py-4 rounded-xl font-black uppercase tracking-widest hover:bg-green-600 sticky bottom-0 shadow-2xl transition-all"
+          @click="submitChampionnat"
+          :disabled="loading"
+          class="w-full bg-blue-900 text-white py-4 rounded-xl font-black uppercase tracking-widest hover:bg-green-600 sticky bottom-0 shadow-2xl transition-all disabled:opacity-50"
       >
         Enregistrer le Championnat complet
       </button>
@@ -229,6 +322,7 @@ const listeCompetitionsExistantes = ref(['Inter-Régional', 'Départemental'])
 .custom-scrollbar::-webkit-scrollbar {
   width: 4px;
 }
+
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background: #1e3a8a;
   border-radius: 10px;
