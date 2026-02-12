@@ -150,16 +150,21 @@ onMounted(async () => {
 
 <template>
   <div class="flex justify-between items-center mb-6">
-    <h2 class="text-2xl font-bold text-blue-900">Championnats</h2>
+    <h2 class="text-2xl font-bold text-blue-900">
+      Championnats
+    </h2>
     <button
-        @click="openCreate"
-        class="bg-blue-800 text-white px-4 py-2 rounded-lg shadow-lg hover:bg-blue-700 font-bold transition"
+      class="bg-blue-800 text-white px-4 py-2 rounded-lg shadow-lg hover:bg-blue-700 font-bold transition"
+      @click="showModal = true"
     >
       + Créer un Championnat
     </button>
   </div>
 
-  <BaseTable :headers="headers" :rows="championnats"/>
+  <BaseTable 
+    :headers="headers" 
+    :rows="championnats" 
+  />
 
   <BaseModal
       :show="showModal"
@@ -182,17 +187,17 @@ onMounted(async () => {
           </select>
 
           <input
-              v-model="form.nom"
-              type="text"
-              placeholder="Nom du Championnat"
-              class="w-full border p-2 rounded-lg font-bold"
-          />
+            v-model="form.nom"
+            type="text"
+            placeholder="Nom du Championnat"
+            class="w-full border p-2 rounded-lg font-bold"
+          >
           <input
-              v-model="form.lieu"
-              type="text"
-              placeholder="Lieu/Ville"
-              class="w-full border p-2 rounded-lg"
-          />
+            v-model="form.lieu"
+            type="text"
+            placeholder="Lieu/Ville"
+            class="w-full border p-2 rounded-lg"
+          >
         </div>
       </section>
 
@@ -202,28 +207,38 @@ onMounted(async () => {
           class="p-5 border-2 border-blue-100 rounded-2xl bg-white shadow-sm space-y-4 relative"
       >
         <button
-            v-if="form.competitions.length > 1"
-            @click="removeCompetition(cIdx)"
-            class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs shadow-md"
+          class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs shadow-md"
+          @click="removeCompetition(cIdx)"
         >
           ✕
         </button>
 
         <div class="flex justify-between items-end border-b pb-2">
           <div class="flex-1">
-            <label class="block text-[10px] font-bold text-blue-900 uppercase italic">Compétition #{{
-                cIdx + 1
-              }}</label>
+            <label
+              class="block text-[10px] font-bold text-blue-900 uppercase italic"
+            >
+              Compétition #{{ cIdx + 1 }}
+            </label>
             <input
-                v-model="comp.nom"
-                type="text"
-                placeholder="Nom de la compétition (ex: District)"
-                class="w-full text-lg font-bold outline-none text-blue-900"
-            />
+              v-model="comp.nom"
+              type="text"
+              placeholder="Nom de la compétition (ex: Elite)"
+              class="w-full text-lg font-bold outline-none text-blue-900"
+            >
+            <select class="text-xs border rounded p-1 bg-slate-50">
+              <option>Sélectionner existante...</option>
+              <option 
+                v-for="c in listeCompetitionsExistantes" 
+                :key="c"
+              >
+                {{ c }}
+              </option>
+            </select>
           </div>
           <button
-              @click="addEpreuve(cIdx)"
-              class="text-[10px] bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition"
+            class="text-[10px] bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition"
+            @click="addEpreuve(cIdx)"  
           >
             + ÉPREUVE
           </button>
@@ -236,15 +251,14 @@ onMounted(async () => {
         >
           <div class="flex justify-between items-center">
             <input
-                v-model="epreuve.nom"
-                type="text"
-                placeholder="Nom de l'épreuve (ex: Nage)"
-                class="bg-transparent border-b border-blue-200 focus:border-blue-500 outline-none flex-1 text-sm font-semibold"
-            />
+              v-model="epreuve.nom"
+              type="text"
+              placeholder="Nom de l'épreuve (ex: Finale)"
+              class="bg-transparent border-b border-blue-200 focus:border-blue-500 outline-none flex-1 text-sm font-semibold"
+            >
             <button
-                v-if="comp.epreuves.length > 1"
-                @click="removeEpreuve(cIdx, eIdx)"
-                class="text-red-400 ml-2"
+              class="text-red-400 ml-2"
+              @click="removeEpreuve(cIdx, eIdx)"
             >
               ✕
             </button>
@@ -259,8 +273,8 @@ onMounted(async () => {
               >
                 {{ s.nom }}
                 <button
-                    @click="removeSportFromEpreuve(cIdx, eIdx, sIdx)"
-                    class="hover:text-yellow-400"
+                  class="hover:text-yellow-400"
+                  @click="removeSportFromEpreuve(cIdx, eIdx, sIdx)"
                 >
                   ✕
                 </button>
@@ -268,11 +282,17 @@ onMounted(async () => {
             </div>
 
             <select
-                @change="(e) => addSportToEpreuve(cIdx, eIdx, e.target.value)"
-                class="w-full text-xs border rounded p-1.5 bg-white"
+              class="w-full text-xs border rounded p-1.5 bg-white"
+              @change="(e) => addSportToEpreuve(cIdx, eIdx, e.target.value)"
             >
-              <option value="">+ Ajouter un sport à cette épreuve...</option>
-              <option v-for="s in listeSports" :key="s.id" :value="s.id">
+              <option value="">
+                + Ajouter un sport à cette épreuve...
+              </option>
+              <option 
+                v-for="s in listeSports" 
+                :key="s.id" 
+                :value="s.id"
+              >
                 {{ s.nom }}
               </option>
             </select>
@@ -281,8 +301,8 @@ onMounted(async () => {
       </div>
 
       <button
-          @click="addCompetition"
-          class="w-full border-2 border-dashed border-slate-300 py-3 rounded-xl text-slate-400 font-bold hover:bg-white hover:border-blue-300 hover:text-blue-500 transition"
+        class="w-full border-2 border-dashed border-slate-300 py-3 rounded-xl text-slate-400 font-bold hover:bg-white hover:border-blue-300 hover:text-blue-500 transition"
+        @click="addCompetition"
       >
         + AJOUTER UNE COMPÉTITION
       </button>

@@ -43,16 +43,20 @@ onMounted(async () => {
 
 <template>
   <div class="flex justify-between items-center mb-6">
-    <h2 class="text-2xl font-bold text-blue-900">Catalogue des Sports</h2>
+    <h2 class="text-2xl font-bold text-blue-900">
+      Catalogue des Sports
+    </h2>
     <button
-        @click="openAdd"
-        class="bg-blue-800 text-white px-4 py-2 rounded-lg hover:bg-blue-700 shadow"
+      @click="openAdd"
     >
       + Nouveau Sport
     </button>
   </div>
 
-  <BaseTable :headers="headers" :rows="sports"/>
+  <BaseTable 
+    :headers="headers" 
+    :rows="sports" 
+  />
 
   <BaseModal
       :show="showModal"
@@ -65,12 +69,15 @@ onMounted(async () => {
       </div>
 
       <input
-          v-model="form.name"
-          type="text"
-          placeholder="Nom (ex: Athlétisme)"
-          class="w-full border p-3 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
-      />
-
+        type="text"
+        placeholder="Code (ex: ATHLE)"
+        class="w-full border p-3 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+      >
+      <input
+        type="text"
+        placeholder="Nom complet (ex: Athlétisme)"
+        class="w-full border p-3 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+      >
       <button
           :disabled="loading"
           @click="submit"

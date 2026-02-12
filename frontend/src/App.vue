@@ -8,10 +8,18 @@
           UGSEL <span class="text-yellow-400">CHAMPIONNATS</span>
         </h1>
         <div class="flex gap-6">
-          <RouterLink to="/championnats" class="nav-item"
-            >Championnats</RouterLink
+          <RouterLink 
+            to="/championnats" 
+            class="nav-item"
           >
-          <RouterLink to="/sports" class="nav-item">Sports</RouterLink>
+            Championnats
+          </RouterLink>
+          <RouterLink 
+            to="/sports" 
+            class="nav-item"
+          >
+            Sports
+          </RouterLink>
         </div>
       </div>
     </nav>
