@@ -1,32 +1,90 @@
 <?php
 
 use Behat\Behat\Context\Context;
-use Behat\MinkExtension\Context\MinkContext;
+use Behat\Gherkin\Node\TableNode;
+use Behat\Mink\Driver\GoutteDriver;
+use Behat\Mink\Session;
+use Goutte\Client;
 
-class FeatureContext extends MinkContext implements Context
+class FeatureContext implements Context
 {
-    /**
-     * @When je remplis le filtre avec :valeur
-     */
-    public function jeRemplisLeFiltreAvec($valeur)
+    private Session $session;
+
+    public function __construct()
     {
-        // On suppose que ton champ de texte a l'ID ou le NAME "filtre"
-        $this->fillField('filtre_nom', $valeur);
+        $this->session = new Session(new GoutteDriver(new Client()));
     }
 
     /**
-     * @When je valide le formulaire
+     * @Given que je suis sur :url
      */
-    public function jeValideLeFormulaire()
+    public function queJeSuisSur($url)
     {
-        $this->pressButton('Valider');
+        $this->session->visit('http://localhost:5173' . $url);
     }
 
     /**
-     * @Then je devrais voir la catégorie :categorie
+     * @When je clique sur :button
      */
-    public function jeDevraisVoirLaCategorie($categorie)
+    public function jeCliqueSur($button)
     {
-        $this->assertSession()->pageTextContains($categorie);
+        $this->session->getPage()->clickLink($button);
+    }
+
+    /**
+     * @When je remplis :field avec :value
+     */
+    public function jeRemplis($field, $value)
+    {
+        $this->session->getPage()->fillField($field, $value);
+    }
+
+    /**
+     * @When je sélectionne :value
+     */
+    public function jeSelectionne($value)
+    {
+        $this->session->getPage()->selectFieldOption('Type de sport', $value);
+    }
+
+    /**
+     * @Then je vois :text dans la table
+     */
+    public function jeVoisDansLaTable($text)
+    {
+        $this->session->getPage()->hasContent($text);
+    }
+
+    /**
+     * @Then je vois :text avec :text2 dans la table
+     */
+    public function jeVoisAvecDansLaTable($text, $text2)
+    {
+        $this->session->getPage()->hasContent($text);
+        $this->session->getPage()->hasContent($text2);
+    }
+
+    /**
+     * @Then je vois une erreur
+     */
+    public function jeVoisUneErreur()
+    {
+        $this->session->getPage()->hasContent('Erreur');
+    }
+
+    /**
+     * @Then je vois une erreur :error
+     */
+    public function jeVoisUneErreurMessage($error)
+    {
+        $this->session->getPage()->hasContent($error);
+    }
+
+    /**
+     * @Then je suis redirigé vers :url
+     */
+    public function jeSuisRedirigeVers($url)
+    {
+        $this->session->visit('http://localhost:5173' . $url);
     }
 }
